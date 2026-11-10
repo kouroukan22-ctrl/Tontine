@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0E6B57">
+<title>Tontine</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+:root{
+  --bg:#F2F5F4; --surface:#FFFFFF; --ink:#13201D; --muted:#61716D; --line:#E0E7E4;
+  --accent:#0E6B57; --accent-ink:#FFFFFF; --accent-soft:#DCEFE8;
+  --gold:#A86A12; --gold-soft:#FBEFD9; --bad:#B42318; --bad-soft:#FDE8E6;
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0D1412; --surface:#16201D; --ink:#E7EFEC; --muted:#9BACA7; --line:#26332F;
+  --accent:#42B897; --accent-ink:#04221B; --accent-soft:#163A30;
+  --gold:#E5B061; --gold-soft:#3A2C14; --bad:#F2887D; --bad-soft:#3E1D1A; color-scheme:dark}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 var(--font);padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:640px;margin:0 auto;padding:16px max(16px,env(safe-area-inset-left,0px)) 16px max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
+header{padding-top:env(safe-area-inset-top,0px)}
+h1{font-size:1.35rem;margin:0;font-weight:700;letter-spacing:-.01em}
+h2{font-size:1.05rem;margin:0;font-weight:700}
+.muted{color:var(--muted);font-size:.88rem}
+.num{font-variant-numeric:tabular-nums}
+.card{background:var(--surface);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+button{font:inherit;color:inherit}
+.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:600;background:var(--accent-soft);color:var(--accent);cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
+.btn.danger{background:var(--bad-soft);color:var(--bad)}
+.btn.sm{padding:8px 12px;font-size:.88rem;border-radius:10px}
+.btn:focus-visible,.m:focus-visible,.chip:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+input,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:12px;width:100%}
+label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;color:var(--muted);font-weight:600}
+/* Sélecteur de jour */
+.days{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;scroll-snap-type:x proximity;scrollbar-width:none}
+.days::-webkit-scrollbar{display:none}
+.day{flex:0 0 auto;scroll-snap-align:center;border:0;background:var(--surface);border-radius:14px;padding:8px 0;width:58px;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;position:relative}
+.day b{font-size:1.1rem}
+.day small{font-size:.68rem;color:var(--muted)}
+.day.sel{background:var(--accent);color:var(--accent-ink)}
+.day.sel small{color:var(--accent-ink);opacity:.85}
+.day.today:not(.sel){box-shadow:inset 0 0 0 2px var(--accent)}
+.day .dot{width:6px;height:6px;border-radius:50%;margin-top:3px;background:var(--line)}
+.day .dot.full{background:var(--accent)} .day .dot.part{background:var(--gold)}
+.day.sel .dot{background:var(--accent-ink)}
+/* Résumé */
+.big{font-size:2.2rem;font-weight:800;line-height:1;letter-spacing:-.02em}
+.bar{height:12px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .25s}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:0;border-radius:99px;padding:8px 14px;background:var(--surface);font-weight:600;font-size:.88rem;cursor:pointer}
+.chip.on{background:var(--ink);color:var(--bg)}
+/* Liste à cocher */
+.list{display:flex;flex-direction:column;gap:8px}
+.m{display:flex;align-items:center;gap:12px;background:var(--surface);border:0;border-radius:14px;padding:12px 12px 12px 14px;width:100%;text-align:left;cursor:pointer;min-height:62px}
+.check{flex:0 0 auto;width:34px;height:34px;border-radius:50%;border:2.5px solid var(--line);display:grid;place-items:center;transition:all .15s}
+.check svg{width:18px;height:18px;opacity:0}
+.m.paid .check{background:var(--accent);border-color:var(--accent)}
+.m.paid .check svg{opacity:1}
+.m .who{flex:1;min-width:0;display:flex;flex-direction:column}
+.m .who b{font-weight:600;overflow-wrap:anywhere}
+.m .who small{color:var(--muted);font-size:.8rem}
+.m.paid .who small{color:var(--accent)}
+.vb{flex:0 0 auto;width:44px;height:44px;border-radius:12px;border:1.5px dashed var(--line);background:transparent;font-weight:800;color:var(--muted);cursor:pointer}
+.vb.on{border:0;background:var(--gold-soft);color:var(--gold)}
+.tag{display:inline-block;font-size:.72rem;font-weight:700;border-radius:99px;padding:2px 8px;background:var(--gold-soft);color:var(--gold);margin-left:4px;vertical-align:1px}
+.tag.bad{background:var(--bad-soft);color:var(--bad)}
+.tag.ok{background:var(--accent-soft);color:var(--accent)}
+.empty{text-align:center;color:var(--muted);padding:24px 8px}
+/* Barre du bas */
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));z-index:10}
+.tabs button{flex:1;max-width:200px;border:0;background:none;padding:6px 0;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.75rem;font-weight:600;color:var(--muted);cursor:pointer}
+.tabs svg{width:24px;height:24px}
+.tabs button.on{color:var(--accent)}
+.medit{display:flex;gap:8px;align-items:center}
+.medit input{padding:9px 10px}
+.medit .n{width:24px;text-align:right;color:var(--muted);font-size:.85rem;flex:0 0 auto}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-size:.9rem;z-index:20;max-width:90%;text-align:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:380px){.grid2{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="row between">
+    <div><h1 id="titre">Tontine</h1><div class="muted" id="sous"></div></div>
+  </header>
+  <main id="vue" style="display:flex;flex-direction:column;gap:14px"></main>
+</div>
+<nav class="tabs">
+  <button data-tab="jour" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18M9 15l2 2 4-4"/></svg>Cocher</button>
+  <button data-tab="bilan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Bilan</button>
+  <button data-tab="reglages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M19 8v6M16 11h6"/></svg>Membres</button>
+</nav>
+<div id="toast" class="toast" hidden></div>
+
+<style>
+:root{--late:#C0362C;--late-soft:#FCE6E3;--due:#B26A00;--due-soft:#FFF0D6;--okc:#14804A;--ok-soft:#DDF3E6;--ahead:#2459C9;--ahead-soft:#E2EAFC}
+@media (prefers-color-scheme: dark){:root{--late:#F28A7F;--late-soft:#3F1C19;--due:#F0B455;--due-soft:#3B2B12;--okc:#5FD08F;--ok-soft:#143826;--ahead:#86A9F5;--ahead-soft:#1A2746}}
+.m{border-left:6px solid var(--st,var(--line))}
+.st-late{--st:var(--late);--st-soft:var(--late-soft)} .st-due{--st:var(--due);--st-soft:var(--due-soft)}
+.st-ok{--st:var(--okc);--st-soft:var(--ok-soft)} .st-ahead{--st:var(--ahead);--st-soft:var(--ahead-soft)}
+.badge{display:inline-block;font-size:.74rem;font-weight:700;border-radius:99px;padding:3px 9px;background:var(--st-soft);color:var(--st);white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.8rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:4px;background:var(--st)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{border:0;border-radius:14px;padding:12px;background:var(--st-soft);color:var(--st);text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.tile b{font-size:1.6rem;line-height:1}
+.tile small{font-weight:600;font-size:.82rem}
+.tile.on{outline:3px solid var(--st)}
+.prow{display:flex;align-items:center;gap:10px;padding:10px 0 10px 12px;border-top:1px solid var(--line);border-left:5px solid var(--st);margin-left:-4px}
+.prow .who{flex:1;min-width:0}
+.medit .ar{padding:8px 10px}
+.part{--pc:#7A3FC4;--pc-soft:#EFE6FB}
+@media (prefers-color-scheme: dark){.part{--pc:#C7A4F5;--pc-soft:#2E2140}}
+.tag.pris{background:var(--pc-soft);color:var(--pc)}
+.vb{width:58px;height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.7rem}
+.vb .ring{width:20px;height:20px;border-radius:50%;background:conic-gradient(var(--rc) calc(var(--p)*1%),var(--line) 0)}
+.vb.full{border:0;background:var(--gold-soft);color:var(--gold);font-size:1rem}
+.vb.half{border:0;background:var(--pc-soft);color:var(--pc);--rc:var(--pc)}
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:640px;border-radius:20px 20px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px;max-height:88vh;overflow-y:auto}
+.amts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.amt{border:1.5px solid var(--line);background:var(--bg);border-radius:12px;padding:12px 4px;font-weight:700;cursor:pointer;color:var(--ink)}
+.amt.tot{background:var(--gold-soft);color:var(--gold);border-color:var(--gold)}
+.amt:disabled{opacity:.35;cursor:default}
+.hist{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.welcome{text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;padding:12px 4px}
+.welcome .logo{width:64px;height:64px;border-radius:20px;background:var(--accent);display:grid;place-items:center}
+</style>
+<script>
+const CLE = "tontine-bureau-v2";
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+let S=null, stockageOk=true;
+const FICHE={"cfg": {"nom": "Tontine Casse 6ème édition", "cotisation": 100000, "frequence": 2, "nbJours": 30, "devise": "GNF", "dateDebut": "2026-09-28"}, "membres": [{"id": "m1", "nom": "SY SAVANE", "valide": true}, {"id": "m2", "nom": "SOULEYMAN KEITA", "valide": false}, {"id": "m3", "nom": "SY SAVANE", "valide": true}, {"id": "m4", "nom": "NOUNKHE", "valide": true}, {"id": "m5", "nom": "SY SAVANE", "valide": true}, {"id": "m6", "nom": "SY SAVANE", "valide": true}, {"id": "m7", "nom": "SOULEYMAN KEITA", "valide": false}, {"id": "m8", "nom": "SORY KEITA", "valide": false}, {"id": "m9", "nom": "SOULEYMAN KEITA", "valide": false}, {"id": "m10", "nom": "SY SAVANE", "valide": true}, {"id": "m11", "nom": "ALHASSANE CONDE", "valide": false}, {"id": "m12", "nom": "ADAMA TRAORE", "valide": true}, {"id": "m13", "nom": "KANALAYE KONATE", "valide": false}, {"id": "m14", "nom": "MAMADI DIAKITE", "valide": true}, {"id": "m15", "nom": "KANALAYE KONATE", "valide": false}, {"id": "m16", "nom": "SORY KEITA", "valide": false}, {"id": "m17", "nom": "MAMADI KEITA", "valide": false}, {"id": "m18", "nom": "SOULEMAN KAKORO", "valide": true}, {"id": "m19", "nom": "SY SAVANE", "valide": true}, {"id": "m20", "nom": "SOUARE", "valide": true}, {"id": "m21", "nom": "MAMADI KEITA", "valide": false}, {"id": "m22", "nom": "AMARA KONATE", "valide": false}, {"id": "m23", "nom": "ALHASSANE CONDE", "valide": false}, {"id": "m24", "nom": "DOCTER", "valide": false}, {"id": "m25", "nom": "ADAMA TRAORE", "valide": false}, {"id": "m26", "nom": "AMARA KONATE", "valide": false}, {"id": "m27", "nom": "MAMADI KEITA", "valide": false}, {"id": "m28", "nom": "MOUSSA KEITA", "valide": false}, {"id": "m29", "nom": "ALPHA KABINET", "valide": false}, {"id": "m30", "nom": "SOULEMAN KEITA", "valide": false}], "paiements": {"1": {"m1": true, "m2": true, "m3": true, "m4": true, "m5": true, "m6": true, "m7": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m19": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "2": {"m1": true, "m2": true, "m3": true, "m4": true, "m5": true, "m6": true, "m7": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m19": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "3": {"m1": true, "m2": true, "m3": true, "m4": true, "m5": true, "m6": true, "m7": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m19": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "4": {"m1": true, "m2": true, "m3": true, "m4": true, "m5": true, "m6": true, "m7": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m19": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "5": {"m1": true, "m2": true, "m3": true, "m4": true, "m5": true, "m6": true, "m7": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m19": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "6": {"m1": true, "m2": true, "m3": true, "m4": true, "m5": true, "m6": true, "m7": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m19": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "7": {"m1": true, "m2": true, "m3": true, "m4": true, "m5": true, "m6": true, "m7": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m19": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "8": {"m1": true, "m2": true, "m3": true, "m4": true, "m5": true, "m6": true, "m7": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m19": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "9": {"m1": true, "m2": true, "m3": true, "m4": true, "m5": true, "m6": true, "m7": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m19": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "10": {"m1": true, "m2": true, "m3": true, "m4": true, "m5": true, "m6": true, "m7": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m19": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "11": {"m3": true, "m5": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "12": {"m3": true, "m5": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "13": {"m3": true, "m5": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "14": {"m3": true, "m5": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "15": {"m3": true, "m5": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "16": {"m3": true, "m5": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m20": true, "m21": true, "m22": true, "m23": true, "m24": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "17": {"m3": true, "m5": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m17": true, "m18": true, "m20": true, "m21": true, "m22": true, "m23": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "18": {"m3": true, "m5": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m13": true, "m14": true, "m15": true, "m16": true, "m18": true, "m20": true, "m22": true, "m23": true, "m25": true, "m26": true, "m27": true, "m28": true, "m29": true, "m30": true}, "19": {"m3": true, "m5": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m14": true, "m15": true, "m16": true, "m18": true, "m22": true, "m23": true, "m26": true, "m28": true, "m29": true, "m30": true}, "20": {"m3": true, "m5": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m14": true, "m15": true, "m16": true, "m18": true, "m22": true, "m23": true, "m26": true, "m29": true, "m30": true}, "21": {"m3": true, "m5": true, "m8": true, "m9": true, "m10": true, "m11": true, "m12": true, "m14": true, "m16": true, "m18": true, "m22": true, "m23": true, "m26": true, "m29": true, "m30": true}, "22": {"m9": true, "m11": true, "m12": true, "m14": true, "m16": true, "m18": true, "m23": true, "m29": true}}, "suivant": 31};
+try{ const t=localStorage.getItem(CLE); S=t?JSON.parse(t):JSON.parse(JSON.stringify(FICHE)); }catch(e){ stockageOk=false; S=JSON.parse(JSON.stringify(FICHE)); }
+sauver();
+function sauver(){ try{ if(S) localStorage.setItem(CLE, JSON.stringify(S)); else localStorage.removeItem(CLE); }catch(e){ stockageOk=false; toast("Impossible d'enregistrer sur ce téléphone"); } }
+
+let onglet="jour", jourSel=null, filtre="tous", recherche="", confirmer=null, config=null; /* config: null | "nouvelle" | "edition" */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=n=>new Intl.NumberFormat("fr-FR").format(Math.round(n||0))+" "+((S&&S.cfg.devise)||"GNF");
+const JS=["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
+const jourDate=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d,12);};
+const dateDu=j=>{const d=jourDate(S.cfg.dateDebut);d.setDate(d.getDate()+(j-1)*S.cfg.frequence);return d;};
+const nbJ=()=>Math.max(1,Number(S.cfg.nbJours)||S.membres.length||1);
+function jourActuel(){ const t=new Date();t.setHours(12,0,0,0); const diff=Math.round((t-jourDate(S.cfg.dateDebut))/864e5); if(diff<0) return 0; return Math.min(nbJ(),Math.floor(diff/S.cfg.frequence)+1); }
+const payeLe=(j,id)=>!!(S.paiements[j]&&S.paiements[j][id]);
+const nbPayes=j=>S.membres.filter(m=>payeLe(j,m.id)).length;
+const totalPaye=id=>{let n=0;for(const k in S.paiements) if(S.paiements[k][id]) n++;return n;};
+function toast(t){const e=$("#toast");e.textContent=t;e.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>e.hidden=true,2200);}
+const auj0=()=>{const t=new Date();return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");};
+
+/* Statut d'un membre : on compare ses paiements au nombre de jours écoulés */
+const cagnotte=()=>S.membres.length*S.cfg.cotisation;
+const prisTotal=m=>(m.prises||[]).reduce((s,x)=>s+x.montant,0);
+const estComplet=m=>{const t=prisTotal(m);return t>0&&t>=cagnotte();};
+const court=n=>n>=1e6?String(+(n/1e6).toFixed(2)).replace(".",",")+" M":Math.round(n/1000)+" k";
+function migrer(x){ if(!x) return; const pot=x.membres.length*x.cfg.cotisation; x.membres.forEach(m=>{ if(!Array.isArray(m.prises)) m.prises=m.valide?[{montant:pot,jour:m.valideJour||null}]:[]; delete m.valide; delete m.valideJour; }); }
+function etiquette(m){ const t=prisTotal(m); if(!t) return ""; return estComplet(m)?`<span class="tag">V a pris ${court(t)}</span>`:`<span class="tag pris part">A pris ${court(t)}</span>`; }
+function boutonV(m){ const t=prisTotal(m), pot=cagnotte(); if(!t) return `<button class="vb" data-v="${m.id}" title="Enregistrer une somme prise">V</button>`;
+  if(t>=pot) return `<button class="vb full" data-v="${m.id}" title="A pris la totalité">V</button>`;
+  return `<button class="vb half part" data-v="${m.id}" title="A pris ${fmt(t)}"><span class="ring" style="--p:${Math.round(t/pot*100)}"></span>${court(t)}</button>`; }
+let sheet=null, confirmPrise=null;
+function vueSheet(){
+  const m=S.membres.find(x=>x.id===sheet); if(!m) return "";
+  const pot=cagnotte(), t=prisTotal(m), reste=Math.max(0,pot-t), j=jourSel??Math.max(1,jourActuel());
+  const pas=[]; for(let v=500000; v<pot; v+=500000) pas.push(v);
+  return `<div class="sheet-bg" data-fermer="1"><div class="sheet" role="dialog" aria-label="Somme prise par ${esc(m.nom)}">
+    <div class="row between"><h2>${esc(m.nom)}</h2><button class="btn sm ghost" data-fermer="1">Fermer</button></div>
+    <div class="grid2"><div><div class="muted">Déjà pris</div><b class="num">${fmt(t)}</b></div><div><div class="muted">Reste à prendre</div><b class="num" style="color:${reste?"var(--pc)":"var(--gold)"}" class="part">${fmt(reste)}</b></div></div>
+    <div class="bar part"><i style="width:${pot?Math.min(100,t/pot*100):0}%;background:${t>=pot?"var(--gold)":"var(--pc)"}"></i></div>
+    ${reste?`<div class="muted">Combien prend-il au jour ${j} ?</div>
+    <div class="amts">${pas.map(v=>`<button class="amt num" data-prendre="${v}" ${v>reste?"disabled":""}>${court(v)}</button>`).join("")}
+      <button class="amt tot num" data-prendre="${reste}">${t?"Le reste":"Tout"}<br>${court(reste)}</button></div>
+    <div class="medit"><input id="autreMt" type="number" inputmode="numeric" placeholder="Autre montant"><button class="btn sm primary" id="autreOk">Ajouter</button></div>`:`<div class="tag" style="text-align:center;padding:10px">✓ A pris la totalité de la cagnotte</div>`}
+    ${(m.prises||[]).length?`<div><div class="muted" style="margin-bottom:4px">Historique</div>${m.prises.map((x,k)=>`<div class="hist"><b class="num" style="flex:1">${fmt(x.montant)}</b><span class="muted">${x.jour?"Jour "+x.jour+" · "+dateDu(x.jour).toLocaleDateString("fr-FR",{day:"numeric",month:"short"}):"Date non notée"}</span><button class="btn sm ${confirmPrise===k?"danger":"ghost"}" data-annuler="${k}">${confirmPrise===k?"Sûr ?":"✕"}</button></div>`).join("")}</div>`:""}
+  </div></div>`;
+}
+function prendre(montant){ const m=S.membres.find(x=>x.id===sheet); if(!m||!(montant>0)) return; const j=jourSel??Math.max(1,jourActuel()); m.prises=m.prises||[]; m.prises.push({montant,jour:j}); sauver(); render(); toast(m.nom+" a pris "+fmt(montant)+(estComplet(m)?" · cagnotte complète":"")); }
+const LIB={late:"En retard",due:"Doit payer aujourd'hui",ok:"À jour",ahead:"En avance"};
+function statut(m){
+  const a=jourActuel(), p=totalPaye(m.id), ecart=p-a;
+  if(a===0) return p>0?{c:"ahead",n:p,txt:`En avance de ${p} jour${p>1?"s":""}`}:{c:"ok",n:0,txt:"Pas encore commencé"};
+  if(ecart>0) return {c:"ahead",n:ecart,txt:`En avance de ${ecart} jour${ecart>1?"s":""}`};
+  if(ecart===0) return {c:"ok",n:0,txt:"À jour"};
+  if(ecart===-1) return {c:"due",n:1,txt:"Doit payer aujourd'hui"};
+  const r=-ecart-1; return {c:"late",n:r,txt:`En retard de ${r} jour${r>1?"s":""} · ${fmt(r*S.cfg.cotisation)}`};
+}
+const legende=()=>`<div class="legend">${["late","due","ok","ahead"].map(c=>`<span class="st-${c}"><i></i>${LIB[c]}</span>`).join("")}</div>`;
+
+/* ---------- Création / nouvelle édition ---------- */
+function vueConfig(){
+  const ed=config==="edition"&&S, c=ed?S.cfg:{nom:"",cotisation:100000,frequence:2,nbJours:0,devise:"GNF"};
+  const noms=ed?S.membres.map(m=>m.nom).join("\n"):"";
+  return `${!S?`<div class="welcome"><div class="logo">${CHECK}</div><h2>Bienvenue</h2><p class="muted">Créez votre tontine quand vous êtes prêt. Vous pourrez tout modifier ensuite : noms, ordre, dates et montant.</p></div>`:""}
+  <div class="card">
+    <h2>${ed?"Nouvelle édition":"Nouvelle tontine"}</h2>
+    ${ed?`<p class="muted">Les coches et les V de l'édition actuelle seront effacés. Modifiez la liste et l'ordre des membres si besoin.</p>`:""}
+    <label>Nom de la tontine<input id="sNom" value="${esc(ed?c.nom.replace(/(\d+)(ème|eme|e)/i,(x,n,s)=>(+n+1)+s):c.nom)}" placeholder="Ex. Tontine Casse 7ème édition"></label>
+    <div class="grid2">
+      <label>Cotisation par personne<input id="sCot" type="number" inputmode="numeric" value="${c.cotisation}"></label>
+      <label>Monnaie<input id="sDev" value="${esc(c.devise)}"></label>
+      <label>Cotisation tous les … jours<input id="sFreq" type="number" inputmode="numeric" min="1" value="${c.frequence}"></label>
+      <label>Nombre de jours de cotisation<input id="sNb" type="number" inputmode="numeric" min="0" value="${c.nbJours||""}" placeholder="Auto = nb de membres"></label>
+    </div>
+    <label>Date du premier jour<input id="sDate" type="date" value="${auj0()}"></label>
+    <label>Membres, un par ligne, dans l'ordre voulu · <span id="cpt" style="color:var(--accent)">${ed?S.membres.length:0} membre(s)</span><textarea id="sNoms" rows="10" placeholder="SY SAVANE&#10;SOULEYMAN KEITA&#10;…">${esc(noms)}</textarea></label>
+    <p class="muted">30, 50, 70 membres ou plus : il n'y a pas de limite. Une personne qui a deux parts s'écrit sur deux lignes. Laissez « Nombre de jours » vide pour qu'il suive automatiquement le nombre de membres.</p>
+    <div class="row"><button class="btn primary" id="creer">${ed?"Démarrer la nouvelle édition":"Créer la tontine"}</button>${S?`<button class="btn ghost" id="annuler">Annuler</button>`:""}</div>
+  </div>
+  ${!S?`<div class="card"><h2>Vous avez une sauvegarde ?</h2><label class="btn ghost" style="flex-direction:row;color:var(--ink);font-size:1rem;justify-content:center">Restaurer une copie<input type="file" id="import" accept=".json,application/json" hidden></label></div>`:""}`;
+}
+function creer(){
+  const noms=$("#sNoms").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  const cfg={nom:$("#sNom").value.trim()||"Tontine",cotisation:Math.max(0,+$("#sCot").value||0),devise:$("#sDev").value.trim()||"GNF",frequence:Math.max(1,+$("#sFreq").value||1),nbJours:Math.max(0,+$("#sNb").value||0),dateDebut:$("#sDate").value||auj0()};
+  const ed=config==="edition"&&S, anciens=ed?S.membres:[];
+  let suivant=ed?S.suivant:1;
+  const membres=noms.map((n,i)=>{ const nom=n.toUpperCase(); return {id:"m"+(suivant++),nom,prises:[]}; });
+  if(ed && S.cfg && S.historique!==undefined){}
+  S={cfg,membres,paiements:{},suivant};
+  config=null; jourSel=null; onglet=membres.length?"jour":"reglages"; sauver(); render(); toast(ed?"Nouvelle édition démarrée":"Tontine créée");
+}
+
+/* ---------- Cocher ---------- */
+function vueJour(){
+  const N=S.membres.length, J=nbJ(), a=jourActuel(), j=jourSel??Math.max(1,a);
+  if(!N) return `<div class="card empty"><h2>Aucun membre</h2><p>Ajoutez les membres dans l'onglet Membres.</p><button class="btn primary" data-tab-go="reglages">Ajouter les membres</button></div>`;
+  const p=nbPayes(j), d=dateDu(j);
+  let jours=""; for(let k=1;k<=J;k++){ const dk=dateDu(k), pk=nbPayes(k);
+    jours+=`<button class="day ${k===j?"sel":""} ${k===a?"today":""}" data-jour="${k}" id="d${k}"><small>${JS[dk.getDay()]}</small><b class="num">${dk.getDate()}</b><small>J${k}</small><span class="dot ${pk===N?"full":pk?"part":""}"></span></button>`; }
+  let L=S.membres.map((m,i)=>({...m,i,s:statut(m)}));
+  if(recherche) L=L.filter(m=>m.nom.toLowerCase().includes(recherche.toLowerCase()));
+  if(filtre==="non") L=L.filter(m=>!payeLe(j,m.id));
+  if(filtre==="retard") L=L.filter(m=>m.s.c==="late");
+  const nbRet=S.membres.filter(m=>statut(m).c==="late").length;
+  return `<div class="days" id="days">${jours}</div>
+  <div class="card">
+    <div><h2>Jour ${j} · ${d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</h2>
+      <div class="muted">${j===a?"Aujourd'hui":j<a?"Jour passé":"Jour à venir"}</div></div>
+    <div class="row between" style="align-items:flex-end"><div><span class="big num">${p}</span><span class="muted num"> / ${N} ont payé</span></div>
+      <div style="text-align:right"><b class="num">${fmt(p*S.cfg.cotisation)}</b><div class="muted num">sur ${fmt(N*S.cfg.cotisation)}</div></div></div>
+    <div class="bar"><i style="width:${p/N*100}%"></i></div>
+    <div class="row"><button class="btn sm" data-tous="${j}">${p===N?"Tout décocher":"Tout le monde a payé"}</button><button class="btn sm ghost" data-recap="${j}">Copier pour WhatsApp</button></div>
+  </div>
+  ${legende()}
+  <input id="cherche" type="search" placeholder="Rechercher un nom…" value="${esc(recherche)}" autocomplete="off">
+  <div class="chips">
+    <button class="chip ${filtre==="tous"?"on":""}" data-filtre="tous">Tous (${N})</button>
+    <button class="chip ${filtre==="non"?"on":""}" data-filtre="non">Pas payé ce jour (${N-p})</button>
+    <button class="chip ${filtre==="retard"?"on":""}" data-filtre="retard">En retard (${nbRet})</button>
+  </div>
+  <div class="list">${L.length?L.map(m=>{const on=payeLe(j,m.id);return `<div class="row" style="gap:8px;flex-wrap:nowrap">
+    <button class="m st-${m.s.c} ${on?"paid":""}" data-pay="${m.id}" aria-pressed="${on}"><span class="check">${CHECK}</span>
+      <span class="who"><b><span class="muted num">${m.i+1}.</span> ${esc(m.nom)}${etiquette(m)}</b><small><span class="badge">${m.s.txt}</span></small></span></button>
+    ${boutonV(m)}</div>`;}).join(""):`<div class="empty">Personne dans cette liste.</div>`}</div>
+  <p class="muted" style="text-align:center">Touchez un nom pour cocher ou décocher son paiement du jour ${j}. Le bouton V indique que la personne a pris la cagnotte.</p>`;
+}
+
+/* ---------- Bilan ---------- */
+let bilanFiltre=null;
+function vueBilan(){
+  const N=S.membres.length, a=jourActuel();
+  if(!N) return `<div class="card empty">Aucun membre.</div>`;
+  let total=0; for(const k in S.paiements) total+=Object.keys(S.paiements[k]).length;
+  const L=S.membres.map((m,i)=>({...m,i,s:statut(m),p:totalPaye(m.id)}));
+  const groupes={late:[],due:[],ok:[],ahead:[]}; L.forEach(m=>groupes[m.s.c].push(m));
+  groupes.late.sort((x,y)=>y.s.n-x.s.n); groupes.ahead.sort((x,y)=>y.s.n-x.s.n);
+  const du=groupes.late.reduce((s,m)=>s+m.s.n*S.cfg.cotisation,0);
+  const nbV=L.filter(m=>estComplet(m)).length, nbPart=L.filter(m=>prisTotal(m)&&!estComplet(m)).length, remis=L.reduce((s,m)=>s+prisTotal(m),0);
+  const preneurs=L.filter(m=>prisTotal(m)).sort((x,y)=>prisTotal(y)-prisTotal(x));
+  const ordre=bilanFiltre?[bilanFiltre]:["late","due","ok","ahead"];
+  return `<div class="card">
+    <div class="row between"><h2>Où en est chacun ?</h2><span class="muted">Jour ${Math.max(a,0)} sur ${nbJ()}</span></div>
+    <div class="tiles">${["late","due","ok","ahead"].map(c=>`<button class="tile st-${c} ${bilanFiltre===c?"on":""}" data-bf="${c}"><b class="num">${groupes[c].length}</b><small>${LIB[c]}</small></button>`).join("")}</div>
+    <div class="grid2">
+      <div><div class="muted">Total collecté</div><b class="num">${fmt(total*S.cfg.cotisation)}</b></div>
+      <div><div class="muted">Retards à récupérer</div><b class="num" style="color:${du?"var(--late)":"var(--okc)"}">${fmt(du)}</b></div>
+      <div><div class="muted">Ont tout pris (V)</div><b class="num">${nbV} sur ${N}</b></div>
+      <div><div class="muted">Ont pris une partie</div><b class="num">${nbPart}</b></div>
+      <div><div class="muted">Total remis</div><b class="num">${fmt(remis)}</b></div>
+      <div><div class="muted">Cagnotte par personne</div><b class="num">${fmt(cagnotte())}</b></div>
+      <div><div class="muted">Fin prévue</div><b>${dateDu(nbJ()).toLocaleDateString("fr-FR",{day:"numeric",month:"long"})}</b></div>
+    </div>
+  </div>
+  ${ordre.filter(c=>groupes[c].length).map(c=>`<div class="card st-${c}">
+    <div class="row between"><h2 style="color:var(--st)">${LIB[c]} (${groupes[c].length})</h2>${bilanFiltre?`<button class="btn sm ghost" data-bf="">Tout voir</button>`:""}</div>
+    <div>${groupes[c].map(m=>`<div class="prow st-${c}"><div class="who"><b>${m.i+1}. ${esc(m.nom)}</b>${etiquette(m)}<div class="muted num">${m.p} jour${m.p>1?"s":""} payé${m.p>1?"s":""} sur ${Math.max(a,0)}</div></div><span class="badge">${c==="late"?"−"+m.s.n+" j":c==="ahead"?"+"+m.s.n+" j":c==="due"?"aujourd'hui":"✓"}</span></div>`).join("")}</div>
+  </div>`).join("")}
+  ${preneurs.length&&!bilanFiltre?`<div class="card"><h2>Sommes prises (${preneurs.length})</h2><div>${preneurs.map(m=>{const t=prisTotal(m),c=estComplet(m);return `<div class="prow part" style="--st:${c?"var(--gold)":"var(--pc)"}"><div class="who"><b>${m.i+1}. ${esc(m.nom)}</b><div class="muted num">${m.prises.map(x=>court(x.montant)).join(" + ")}${c?"":" · reste "+fmt(cagnotte()-t)}</div></div>${c?'<span class="tag">V tout pris</span>':`<span class="tag pris">${court(t)}</span>`}</div>`;}).join("")}</div></div>`:""}
+  <p class="muted">Le statut compare le nombre de jours payés au nombre de jours écoulés depuis le début. Une personne qui paie à l'avance (coche un jour à venir) passe en bleu.</p>`;
+}
+
+/* ---------- Membres et réglages ---------- */
+function vueReglages(){
+  const c=S.cfg, n=S.membres.length;
+  return `<div class="card">
+    <h2>Membres (${n})</h2>
+    <p class="muted">Utilisez les flèches pour changer la place d'un membre. Touchez un nom pour le corriger.</p>
+    <div class="list">${S.membres.map((m,i)=>`<div class="medit"><span class="n num">${i+1}</span><input data-nom="${m.id}" value="${esc(m.nom)}" aria-label="Nom du membre ${i+1}">
+      <button class="btn sm ghost ar" data-haut="${i}" ${i===0?"disabled":""} aria-label="Monter">↑</button>
+      <button class="btn sm ghost ar" data-bas="${i}" ${i===n-1?"disabled":""} aria-label="Descendre">↓</button>
+      <button class="btn sm ${confirmer===m.id?"danger":"ghost"}" data-suppr="${m.id}">${confirmer===m.id?"Sûr ?":"✕"}</button></div>`).join("")}</div>
+    <div class="medit"><span class="n">+</span><input id="nouveau" placeholder="Nom du nouveau membre"><button class="btn sm primary" id="ajout">Ajouter</button></div>
+    <label>Ajouter plusieurs membres d'un coup (un nom par ligne)<textarea id="lot" rows="4" placeholder="Collez ici une liste de noms"></textarea></label>
+    <button class="btn" id="ajoutLot">Ajouter la liste à la fin</button>
+    <p class="muted">${c.nbJours?`Nombre de jours fixé à ${c.nbJours}.`:`Le nombre de jours suit le nombre de membres (${n}).`}</p>
+  </div>
+  <div class="card">
+    <h2>Règles et dates</h2>
+    <label>Nom de la tontine<input id="cNom" value="${esc(c.nom)}"></label>
+    <div class="grid2">
+      <label>Cotisation par personne<input id="cCot" type="number" inputmode="numeric" value="${c.cotisation}"></label>
+      <label>Monnaie<input id="cDev" value="${esc(c.devise)}"></label>
+      <label>Cotisation tous les … jours<input id="cFreq" type="number" inputmode="numeric" min="1" value="${c.frequence}"></label>
+      <label>Nombre de jours<input id="cNb" type="number" inputmode="numeric" min="0" value="${c.nbJours||""}" placeholder="Auto : ${n}"></label>
+    </div>
+    <label>Date du premier jour<input id="cDate" type="date" value="${c.dateDebut}"></label>
+    <button class="btn primary" id="sauveCfg">Enregistrer</button>
+  </div>
+  <div class="card">
+    <h2>Nouvelle édition</h2>
+    <p class="muted">Pour recommencer avec de nouvelles dates, un nouvel ordre ou d'autres membres.</p>
+    <button class="btn" id="edition">Préparer la nouvelle édition</button>
+  </div>
+  <div class="card">
+    <h2>Sauvegarde</h2>
+    <p class="muted">Tout reste dans ce téléphone, sans connexion. Téléchargez une copie de temps en temps pour ne rien perdre.</p>
+    <div class="row"><button class="btn" id="export">Télécharger une copie</button>
+      <label class="btn ghost" style="flex-direction:row;color:var(--ink);font-size:1rem">Restaurer une copie<input type="file" id="import" accept=".json,application/json" hidden></label></div>
+    <button class="btn danger" id="effacer">${confirmer==="effacer"?"Confirmer : tout effacer":"Tout effacer"}</button>
+  </div>`;
+}
+
+function render(){
+  const tabs=document.querySelector(".tabs");
+  if(!S||config){ tabs.hidden=true; $("#titre").textContent="Tontine"; $("#sous").textContent=S?S.cfg.nom+" · préparation de la nouvelle édition":"Gestion simple, sans connexion"; $("#vue").innerHTML=vueConfig(); return; }
+  tabs.hidden=false;
+  $("#titre").textContent="Tontine";
+  $("#sous").textContent=`${S.cfg.nom} · ${S.membres.length} membres · ${fmt(S.cfg.cotisation)} · tous les ${S.cfg.frequence} jours`+(stockageOk?"":" · ⚠ non enregistré");
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===onglet));
+  const foc=document.activeElement&&document.activeElement.id, pos=foc==="cherche"?document.activeElement.selectionStart:null;
+  const dsl=$("#days")?.scrollLeft;
+  $("#vue").innerHTML={jour:vueJour,bilan:vueBilan,reglages:vueReglages}[onglet]()+(sheet?vueSheet():"");
+  document.body.style.overflow=sheet?"hidden":"";
+  const days=$("#days"); if(days){ if(dsl!=null) days.scrollLeft=dsl; else { const s=$("#d"+(jourSel??Math.max(1,jourActuel()))); if(s) days.scrollLeft=s.offsetLeft-days.clientWidth/2+29; } }
+  if(foc==="cherche"){const e=$("#cherche");e.focus();if(pos!=null)e.setSelectionRange(pos,pos);}
+}
+
+/* ---------- Actions ---------- */
+document.querySelector(".tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;onglet=b.dataset.tab;sheet=null;confirmer=null;render();window.scrollTo(0,0);});
+$("#vue").addEventListener("click",e=>{
+  if(e.target.dataset&&e.target.dataset.fermer){ sheet=null; render(); return; }
+  const b=e.target.closest("button"); if(!b) return; const d=b.dataset;
+  if(b.id==="creer") return creer();
+  if(b.id==="annuler"){config=null;render();return;}
+  if(!S) return;
+  const j=jourSel??Math.max(1,jourActuel());
+  if(d.tabGo){onglet=d.tabGo;render();}
+  else if(d.jour){jourSel=Number(d.jour);render();}
+  else if(d.filtre){filtre=d.filtre;render();}
+  else if(d.bf!==undefined){bilanFiltre=d.bf&&bilanFiltre!==d.bf?d.bf:null;render();}
+  else if(d.pay){ S.paiements[j]=S.paiements[j]||{}; if(S.paiements[j][d.pay]) delete S.paiements[j][d.pay]; else S.paiements[j][d.pay]=true; sauver(); render(); }
+  else if(d.v){ sheet=d.v; confirmPrise=null; render(); }
+  else if(d.prendre){ prendre(Number(d.prendre)); }
+  else if(b.id==="autreOk"){ const v=Math.round(+$("#autreMt").value||0); if(v>0) prendre(v); }
+  else if(d.annuler!==undefined){ const k=Number(d.annuler); if(confirmPrise!==k){confirmPrise=k;render();return;} const m=S.membres.find(x=>x.id===sheet); m.prises.splice(k,1); confirmPrise=null; sauver(); render(); toast("Somme annulée"); }
+  else if(d.tous){ const k=Number(d.tous), tous=nbPayes(k)===S.membres.length; S.paiements[k]={}; if(!tous) S.membres.forEach(m=>S.paiements[k][m.id]=true); sauver(); render(); }
+  else if(d.recap){ recap(Number(d.recap)); }
+  else if(d.haut||d.bas){ const i=Number(d.haut||d.bas), k=d.haut?i-1:i+1; [S.membres[i],S.membres[k]]=[S.membres[k],S.membres[i]]; sauver(); render(); }
+  else if(d.suppr){ if(confirmer!==d.suppr){confirmer=d.suppr;render();return;} S.membres=S.membres.filter(m=>m.id!==d.suppr); confirmer=null; sauver(); render(); toast("Membre retiré"); }
+  else if(b.id==="ajout"){ const n=$("#nouveau").value.trim(); if(!n) return; S.membres.push({id:"m"+(S.suivant++),nom:n.toUpperCase(),prises:[]}); sauver(); render(); $("#nouveau").focus(); toast(n+" ajouté"); }
+  else if(b.id==="ajoutLot"){ const L=$("#lot").value.split("\n").map(s=>s.trim()).filter(Boolean); if(!L.length) return; L.forEach(n=>S.membres.push({id:"m"+(S.suivant++),nom:n.toUpperCase(),prises:[]})); sauver(); render(); toast(L.length+" membres ajoutés"); }
+  else if(b.id==="sauveCfg"){ Object.assign(S.cfg,{nom:$("#cNom").value.trim()||"Tontine",cotisation:Math.max(0,+$("#cCot").value||0),devise:$("#cDev").value.trim(),frequence:Math.max(1,+$("#cFreq").value||1),nbJours:Math.max(0,+$("#cNb").value||0),dateDebut:$("#cDate").value||S.cfg.dateDebut}); jourSel=null; sauver(); render(); toast("Enregistré"); }
+  else if(b.id==="export"&&window.AndroidApp){ const nom="tontine-sauvegarde-"+auj0()+".json"; try{ toast(window.AndroidApp.sauvegarder(JSON.stringify(S,null,1),nom)); }catch(_){ toast("Échec de la sauvegarde"); } }
+  else if(b.id==="export"){ const blob=new Blob([JSON.stringify(S,null,1)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="tontine-sauvegarde-"+auj0()+".json"; document.body.appendChild(a); a.click(); a.remove(); toast("Copie téléchargée"); }
+  else if(b.id==="edition"){ config="edition"; render(); window.scrollTo(0,0); }
+  else if(b.id==="effacer"){ if(confirmer!=="effacer"){confirmer="effacer";render();return;} S=null; confirmer=null; config=null; sauver(); render(); toast("Tout a été effacé"); }
+});
+$("#vue").addEventListener("input",e=>{ if(e.target.id==="cherche"){recherche=e.target.value;render();} if(e.target.id==="sNoms"){ $("#cpt").textContent=e.target.value.split("\n").filter(s=>s.trim()).length+" membre(s)"; } });
+$("#vue").addEventListener("change",e=>{
+  const t=e.target;
+  if(t.dataset.nom&&S){ const m=S.membres.find(x=>x.id===t.dataset.nom); if(m&&t.value.trim()){m.nom=t.value.trim().toUpperCase();sauver();toast("Nom modifié");} }
+  if(t.id==="import"&&t.files[0]){ const r=new FileReader(); r.onload=()=>{ try{ const x=JSON.parse(r.result); if(!x.cfg||!Array.isArray(x.membres)) throw 0; migrer(x); S=x; config=null; sauver(); jourSel=null; onglet="jour"; render(); toast("Copie restaurée"); }catch(_){ toast("Ce fichier n'est pas une sauvegarde de la tontine"); } }; r.readAsText(t.files[0]); }
+});
+$("#vue").addEventListener("keydown",e=>{ if(e.target.id==="nouveau"&&e.key==="Enter") $("#ajout").click(); });
+const prises_du=(m,j)=>(m.prises||[]).filter(x=>x.jour===j).reduce((s,x)=>s+x.montant,0);
+function recap(j){
+  const ok=S.membres.filter(m=>payeLe(j,m.id)), ko=S.membres.filter(m=>!payeLe(j,m.id));
+  const ret=S.membres.map(m=>({m,s:statut(m)})).filter(x=>x.s.c==="late");
+  const txt=`*${S.cfg.nom}*\nJour ${j} – ${dateDu(j).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}\n✅ Payé : ${ok.length}/${S.membres.length} (${fmt(ok.length*S.cfg.cotisation)})\n⏳ Pas encore payé : ${ko.map(m=>m.nom).join(", ")||"personne"}${(()=>{const pr=S.membres.filter(m=>prises_du(m,j));return pr.length?"\n💰 Ont pris ce jour : "+pr.map(m=>m.nom+" ("+fmt(prises_du(m,j))+")").join(", "):"";})()}${ret.length?"\n🔴 En retard : "+ret.map(x=>x.m.nom+" ("+x.s.n+" j)").join(", "):""}`;
+  const secours=()=>{ const ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");toast("Texte copié");}catch(_){toast("Copie impossible");} ta.remove(); };
+  if(navigator.clipboard&&window.isSecureContext) navigator.clipboard.writeText(txt).then(()=>toast("Copié, collez-le dans WhatsApp"),secours); else secours();
+}
+migrer(S); sauver();
+render();
+if("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
